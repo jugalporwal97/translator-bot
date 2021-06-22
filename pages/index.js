@@ -5,10 +5,30 @@ import {useCollection} from "react-firebase-hooks/firestore"
 import { db } from '../firebase'
 import { useRef, useState } from 'react'
 
-export default function Home() {
+export async function getServerSideProps(context){
+  const messages = await db.collection("translations").orderBy("timestamp","asc").get()
+
+  const data = {
+    docs: messages.docs.map((doc)=>({
+      id:doc.id,
+      ...doc.data(),
+    }))
+  }
+
+  return {
+    props:{
+messages:JSON.stringify(data)
+    }
+  };
+
+
+}
+
+export default function Home({messages}) {
   
  const [messagesSnapshot,loading,error] = useCollection(db.collection("translations").orderBy("timestamp","asc"))
 
+//  console.log(JSON.parse(messages))
 const handelChange = e =>{
   setlocal(e.target.value)
 }
@@ -34,12 +54,17 @@ const handelChange = e =>{
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <h1>Lets BUild a Translation App</h1>
-      {messagesSnapshot?.docs.map((doc)=>(
+      {messagesSnapshot ? messagesSnapshot.docs.map((doc)=>(
         
           <div key={doc.id}>
             <p>{doc.data().translated?.[local]}</p>
           </div>
-      ))}
+      )):  JSON.parse(messages).docs.map((doc)=>(
+        
+        <div key={doc.id}>
+          <p>{doc.translated?.[local]}</p>
+        </div>
+    ))}
       <select  value={local} onChange={handelChange}>
         <option value="en">English</option>
         <option value="es">Spanish</option>
